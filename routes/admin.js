@@ -40,12 +40,21 @@ adminRouter.post("/signin", async (req, res) => {
     try {
         const { email, password } = req.body;
         const admin = await adminModel.findOne({ email });
-        const matchPassword = bcrypt.compare(password, admin.password);
+        
+        if (!admin) {
+            return res.status(403).json({
+                message: "Incorrect Credentials"
+            });
+        }
+        
+        const matchPassword = await bcrypt.compare(password, admin.password);
+        
         if (matchPassword) {
             const token = jwt.sign({
                 id: admin.id
             }, JWT_ADMIN_PASSWORD);
-            res.json({
+            
+            return res.json({
                 token,
                 admin: {
                     email: admin.email,
@@ -54,39 +63,93 @@ adminRouter.post("/signin", async (req, res) => {
                 }
             });
         } else {
-            res.status(403).json({
-                message: `Incorrect Credentials`
+            return res.status(403).json({
+                message: "Incorrect Credentials"
             });
         }
     } catch (error) {
-        console.log(`Error ${error}`);
-        return res.status(500).json({ message: "Login endpoint" });
+        console.error("Signin error:", error);
+        return res.status(500).json({ 
+            message: "Cannot Signin",
+            error: error.message 
+        });
     }
 });
 
-adminRouter.post("/course",adminMiddleware ,async (req,res)=>{
-    const creatorId = req.userId;
+adminRouter.post("/course_create", adminMiddleware, async (req, res) => {
+    try {
+        const creatorId = req.userId;
+        const { title, imageUrl, price, description } = req.body;
 
-    const {title , imageUrl , price , description } = req.body;
+        const course = await courseModel.create({
+            title,
+            description,
+            imageUrl,
+            price,
+            creatorId
+        });
+        
+        return res.json({
+            message: "Course Created",
+            courseId: course._id
+        });
+    } catch (error) {
+        console.error("Error creating course:", error);
+        return res.status(500).json({
+            message: "Failed to create course",
+            error: error.message
+        });
+    }
+});
 
-    const course = await courseModel.create({
-        title,description,imageUrl,price,creatorId
-    })
-    res.json({
-        message: `COurse Created`,
-        courseId : course._id
-    })
-})
+adminRouter.put("/course_update", adminMiddleware, async (req, res) => {
+    try {
+        const creatorId = req.userId;
+        const { title, imageUrl, price, description, courseId } = req.body;
 
-adminRouter.put("/" , (req,res)=>{
-    
-})
+        const course = await courseModel.updateOne({
+            _id: courseId,
+            creatorId
+        }, {
+            title:title, 
+            description:description,
+            imageUrl:imageUrl, 
+            price:price
+        });
+        
+        return res.json({
+            message: "Course updated",
+            course
+        });
+    } catch (error) {
+        console.error("Error updating course:", error);
+        return res.status(500).json({
+            message: "Failed to update course",
+            error: error.message
+        });
+    }
+});
 
-adminRouter.get("/bulk" , (req,res)=>{
-    res.json({
-        message:"Login endpoint"
-    })
-})
+adminRouter.get("/bulk", adminMiddleware, async (req, res) => {
+    try {
+        const creatorId = req.userId;
+
+        const courses = await courseModel.find({
+            creatorId
+        });
+
+        return res.json({
+            message: "Your courses are:",
+            courses
+        });
+    } catch (error) {
+        console.error("Error fetching courses:", error);
+        return res.status(500).json({
+            message: "Failed to fetch courses",
+            error: error.message
+        });
+    }
+});
 
 adminRouter.post("/course/create", (req, res) => {
     res.json({

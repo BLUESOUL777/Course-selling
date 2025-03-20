@@ -1,6 +1,8 @@
-import express from "express"
-import mongoose from "mongoose"
-import jwt from 'jsonwebtoken'
+import express from "express";
+import mongoose from "mongoose";
+import jwt from 'jsonwebtoken';
+import dotenv from "dotenv";
+dotenv.config();
 
 import { userRouter } from "./routes/user.js";
 import { courseRouter } from "./routes/course.js";
@@ -15,7 +17,7 @@ app.use("/edu/admin" , adminRouter);
 
 
 async function main(){
-    mongoose.connect("");
+    mongoose.connect(process.env.MONGO_URL);
     console.log("Connected to db");
     app.listen(3000);
 }
