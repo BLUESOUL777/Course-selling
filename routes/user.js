@@ -1,8 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { userModel } from "../db.js";
+import { courseModel, purchaseModel, userModel } from "../db.js";
 import jwt from "jsonwebtoken";
 import { JWT_USER_PASSWORD } from "../config.js";
+import { userMiddleware } from "../middlewares/user.js";
 
 const userRouter = Router();
 
@@ -59,9 +60,20 @@ try{
     }  
 });
 
-userRouter.get("/purchases" , (req,res)=>{
+userRouter.get("/purchases" , userMiddleware ,async (req,res)=>{
+    const userId = req.userId;
+    const purchased = await purchaseModel.find({
+        userId,
+    })
+
+    const courseData = await courseModel.find({
+        _id: { $in: purchased.map(purchase => purchase.courseId) }
+    });
+
     res.json({
-        message:"Login endpoint"
+        message:"Ur purchaes are:-",
+        purchased,
+        courseData
     })
 })
 
